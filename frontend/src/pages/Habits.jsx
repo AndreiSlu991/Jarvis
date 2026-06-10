@@ -1,125 +1,159 @@
-import { useState } from 'react';
-import { Plus, Check, Flame, Trash2, Pencil } from 'lucide-react';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Modal from '../components/ui/Modal';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useGet, useAction } from '../hooks/useApi';
+import JIcon from '../components/ui/JIcon.jsx';
+import api from '../api/client';
 
-const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#a855f7', '#ef4444', '#06b6d4'];
+const TODAY = new Date().toISOString().slice(0, 10);
 
-function Heatmap({ recent }) {
+function WeekDots({ habitId, logs }) {
   const days = [];
-  const set = new Set(recent || []);
-  for (let i = 69; i >= 0; i--) {
+  for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     days.push(d.toISOString().slice(0, 10));
   }
+  const set = new Set((logs || []).filter((l) => l.habit_id === habitId).map((l) => l.date));
   return (
-    <div className="grid grid-flow-col grid-rows-7 gap-[3px]">
+    <div className="j-week">
       {days.map((d) => (
-        <span key={d} title={d} className={`h-2.5 w-2.5 rounded-sm ${set.has(d) ? 'bg-green-500' : 'bg-surface-2'}`} />
+        <div key={d} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <div className={set.has(d) ? 'j-week-dot on' : 'j-week-dot'} />
+          <span className="j-week-day">{new Date(d + 'T12:00:00').toLocaleDateString('en', { weekday: 'narrow' })}</span>
+        </div>
       ))}
     </div>
   );
 }
 
-export default function Habits() {
-  const habits = useGet('habits', '/habits');
-  const logs = useGet(['habit-logs'], '/habits/logs');
-  const streaks = useGet('streaks', '/habits/streaks');
-  const [modal, setModal] = useState(null); // null | {} | habit
-  const [form, setForm] = useState({ name: '', description: '', color: COLORS[0] });
+function HabitRow({ habit, done, logs, streak }) {
+  const queryClient = useQueryClient();
+  const [burst, setBurst] = useState(false);
 
-  const invalidate = ['habits', ['habit-logs'], 'streaks'];
-  const save = useAction({ invalidate, successMessage: 'Habit saved' });
-  const remove = useAction({ method: 'delete', invalidate, successMessage: 'Habit deleted' });
-  const log = useAction({ invalidate: [['habit-logs'], 'streaks'] });
-
-  const doneIds = new Set((logs.data || []).map((l) => l.habit_id));
-
-  const openModal = (habit) => {
-    setForm(habit ? { name: habit.name, description: habit.description || '', color: habit.color } : { name: '', description: '', color: COLORS[0] });
-    setModal(habit || {});
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    await save.mutateAsync({
-      url: modal?.id ? undefined : '/habits',
-      ...(modal?.id ? { url: `/habits/${modal.id}` } : {}),
-      data: form
-    });
-    setModal(null);
-  };
-
-  if (habits.isLoading) return <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>;
+  const handleToggle = useCallback(async () => {
+    await api.post('/api/habits/' + habit.id + '/log');
+    queryClient.invalidateQueries({ queryKey: ['habit-logs'] });
+    queryClient.invalidateQueries({ queryKey: ['streaks'] });
+    if (!done) {
+      setBurst(true);
+      setTimeout(() => setBurst(false), 650);
+    }
+  }, [habit.id, done, queryClient]);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex justify-end">
-        <Button onClick={() => openModal(null)}><Plus size={16} /> New habit</Button>
+    <div className="j-habit-row">
+      <button
+        className={done ? 'j-habit-check big done' : 'j-habit-check big'}
+        onClick={handleToggle}
+        title={done ? 'Mark undone' : 'Mark done'}
+      >
+        {burst && <span className="j-burst" />}
+        {done && <JIcon name="check" />}
+      </button>
+      <div className="j-habit-info">
+        <span className={done ? 'j-habit-name done' : 'j-habit-name'}>{habit.name}</span>
+        {habit.time_of_day && (
+          <span className="j-habit-time">{habit.time_of_day}</span>
+        )}
+        <WeekDots habitId={habit.id} logs={logs} />
       </div>
-      {(habits.data || []).length === 0 && (
-        <Card className="text-center text-sm text-muted py-10">No habits yet. Create your first one.</Card>
+      {streak > 0 && (
+        <div className="j-streak">
+          <JIcon name="flame" />
+          <span>{streak}d</span>
+        </div>
       )}
-      {(habits.data || []).map((h) => {
-        const done = doneIds.has(h.id);
-        const s = (streaks.data || []).find((x) => x.id === h.id);
-        return (
-          <Card key={h.id}>
-            <div className="flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => log.mutate({ url: `/habits/${h.id}/log`, data: { completed: !done } })}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 ${
-                  done ? 'border-green-400 bg-green-500/20 text-green-300' : 'border-white/20 text-transparent hover:border-white/50'
-                }`}
-              >
-                <Check size={18} />
-              </button>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full" style={{ background: h.color }} />
-                  <span className="font-medium text-primary">{h.name}</span>
-                  {s?.streak > 0 && (
-                    <span className="flex items-center gap-1 text-xs text-orange-400"><Flame size={12} />{s.streak}d</span>
-                  )}
-                </div>
-                {h.description && <p className="truncate text-xs text-muted">{h.description}</p>}
-              </div>
-              <div className="hidden sm:block"><Heatmap recent={s?.recent} /></div>
-              <div className="flex gap-1">
-                <Button variant="ghost" className="!p-2" onClick={() => openModal(h)}><Pencil size={14} /></Button>
-                <Button variant="ghost" className="!p-2 text-red-400" loading={remove.isPending}
-                  onClick={() => confirm(`Delete "${h.name}"?`) && remove.mutate({ url: `/habits/${h.id}` })}>
-                  <Trash2 size={14} />
-                </Button>
-              </div>
-            </div>
-            <div className="mt-3 sm:hidden"><Heatmap recent={s?.recent} /></div>
-          </Card>
-        );
-      })}
+    </div>
+  );
+}
 
-      <Modal open={!!modal} onClose={() => setModal(null)} title={modal?.id ? 'Edit habit' : 'New habit'}>
-        <form onSubmit={submit} className="space-y-3">
-          <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          <Input label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-          <div>
-            <span className="mb-1 block text-xs font-medium text-muted">Color</span>
-            <div className="flex gap-2">
-              {COLORS.map((c) => (
-                <button key={c} type="button" onClick={() => setForm({ ...form, color: c })}
-                  className={`h-7 w-7 rounded-full border-2 ${form.color === c ? 'border-white' : 'border-transparent'}`}
-                  style={{ background: c }} />
-              ))}
+export default function Habits() {
+  const habits = useGet('habits', '/api/habits');
+  const logs = useGet('habit-logs', '/api/habits/logs?date=' + TODAY);
+  const streaks = useGet('streaks', '/api/habits/streaks');
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState({ name: '', time_of_day: '' });
+
+  const addHabit = useAction({
+    method: 'post',
+    url: '/api/habits',
+    invalidate: ['habits'],
+  });
+
+  const doneIds = new Set((logs.data || []).map((l) => l.habit_id));
+  const streakMap = streaks.data || {};
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    await addHabit.mutateAsync({ name: form.name, time_of_day: form.time_of_day || undefined });
+    setForm({ name: '', time_of_day: '' });
+    setShowAdd(false);
+  };
+
+  return (
+    <div className="j-screen-col">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span className="j-sec-title">Habits</span>
+        <button className="j-btn j-btn-primary j-btn-sm" onClick={() => setShowAdd((v) => !v)}>
+          <JIcon name="plus" /> {showAdd ? 'Cancel' : 'Add habit'}
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="j-card" style={{ marginBottom: 12 }}>
+          <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="j-input-group">
+              <label className="j-label">Habit name</label>
+              <input
+                className="j-input"
+                placeholder="e.g. Morning run"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
+              />
             </div>
-          </div>
-          <Button type="submit" loading={save.isPending} className="w-full">Save</Button>
-        </form>
-      </Modal>
+            <div className="j-input-group">
+              <label className="j-label">Time of day (optional)</label>
+              <input
+                className="j-input"
+                placeholder="e.g. Morning"
+                value={form.time_of_day}
+                onChange={(e) => setForm({ ...form, time_of_day: e.target.value })}
+              />
+            </div>
+            <button type="submit" className="j-btn j-btn-primary" disabled={addHabit.isPending}>
+              {addHabit.isPending ? 'Saving…' : 'Save habit'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      {habits.isLoading && (
+        <div className="j-habit-list">
+          {[1, 2, 3].map((i) => <div key={i} className="j-skel" style={{ height: 72, borderRadius: 12, marginBottom: 8 }} />)}
+        </div>
+      )}
+
+      {!habits.isLoading && (habits.data || []).length === 0 && (
+        <div className="j-card" style={{ textAlign: 'center', padding: '2rem 1rem', opacity: 0.6 }}>
+          No habits yet. Add your first one above.
+        </div>
+      )}
+
+      {!habits.isLoading && (
+        <div className="j-habit-list">
+          {(habits.data || []).map((h) => (
+            <HabitRow
+              key={h.id}
+              habit={h}
+              done={doneIds.has(h.id)}
+              logs={logs.data}
+              streak={streakMap[h.id]?.current || 0}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

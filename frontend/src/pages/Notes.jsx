@@ -1,97 +1,203 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Modal from '../components/ui/Modal';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
 import { useGet, useAction } from '../hooks/useApi';
+import JIcon from '../components/ui/JIcon.jsx';
+
+function fmtDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  const now = new Date();
+  const diffMs = now - d;
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return diffDays + 'd ago';
+  return d.toLocaleDateString('en', { month: 'short', day: 'numeric' });
+}
 
 export default function Notes() {
-  const projects = useGet('projects', '/notes/projects');
+  const projects = useGet('projects', '/api/notes/projects');
   const [activeProject, setActiveProject] = useState(null);
-  const [search, setSearch] = useState('');
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ title: '', content: '', tags: '' });
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({ title: '', content: '' });
 
-  const url = search
-    ? `/notes/search?q=${encodeURIComponent(search)}`
-    : activeProject ? `/notes?project_id=${activeProject}` : '/notes';
-  const notes = useGet(['notes', activeProject, search], url);
+  const notesUrl = activeProject ? `/api/notes?project_id=${activeProject}` : '/api/notes';
+  const notes = useGet(['notes', activeProject], notesUrl);
 
-  const save = useAction({ invalidate: [['notes']], successMessage: 'Note saved' });
-  const remove = useAction({ method: 'delete', invalidate: [['notes']], successMessage: 'Note deleted' });
+  const addNote = useAction({
+    method: 'post',
+    url: '/api/notes',
+    invalidate: [['notes', activeProject], ['notes', null]],
+  });
 
-  const open = (note) => {
-    setForm(note ? { title: note.title, content: note.content, tags: note.tags } : { title: '', content: '', tags: '' });
-    setEditing(note || {});
+  const deleteNote = useAction({
+    method: 'delete',
+    url: '/api/notes/__placeholder__',
+    invalidate: [['notes', activeProject], ['notes', null]],
+  });
+
+  const handleAdd = async (e) => {
+    e.preventDefault();
+    await addNote.mutateAsync({
+      title: form.title,
+      content: form.content,
+      project_id: activeProject || undefined,
+    });
+    setForm({ title: '', content: '' });
+    setShowModal(false);
   };
 
-  const submit = async (e) => {
-    e.preventDefault();
-    await save.mutateAsync({
-      url: editing?.id ? `/notes/${editing.id}` : '/notes',
-      data: { ...form, project_id: editing?.id ? editing.project_id : activeProject }
-    });
-    setEditing(null);
+  const handleDelete = (e, id) => {
+    e.stopPropagation();
+    if (!window.confirm('Delete this note?')) return;
+    deleteNote.mutate({ _url: `/api/notes/${id}` });
+  };
+
+  const projectColor = (pid) => {
+    const p = (projects.data || []).find((x) => x.id === pid);
+    return p?.color || '#888';
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <button onClick={() => setActiveProject(null)}
-          className={`rounded-full px-3 py-1 text-xs ${!activeProject ? 'bg-accent text-white' : 'bg-white/[0.05] text-muted hover:bg-white/[0.08]'}`}>
+    <div className="j-screen-col">
+      {/* Project tabs */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, alignItems: 'center' }}>
+        <button
+          className="j-tag"
+          style={!activeProject ? { background: 'var(--accent)', color: '#fff', border: 'none' } : {}}
+          onClick={() => setActiveProject(null)}
+        >
           All
         </button>
         {(projects.data || []).map((p) => (
-          <button key={p.id} onClick={() => setActiveProject(p.id)}
-            className={`rounded-full px-3 py-1 text-xs ${activeProject === p.id ? 'text-white' : 'bg-white/[0.05] text-muted hover:bg-white/[0.08]'}`}
-            style={activeProject === p.id ? { background: p.color } : {}}>
+          <button
+            key={p.id}
+            className="j-tag"
+            style={activeProject === p.id ? { background: p.color, color: '#fff', border: 'none' } : {}}
+            onClick={() => setActiveProject(p.id)}
+          >
             {p.name}
           </button>
         ))}
-        <div className="ml-auto flex items-center gap-2">
-          <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-2.5 text-muted" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
-              className="w-36 rounded-lg border border-line bg-surface-2 py-1.5 pl-8 pr-2 text-sm outline-none focus:border-accent sm:w-48" />
-          </div>
-          <Button onClick={() => open(null)} className="!px-3"><Plus size={16} /></Button>
-        </div>
+        <button
+          className="j-btn j-btn-primary j-btn-sm"
+          style={{ marginLeft: 'auto' }}
+          onClick={() => setShowModal(true)}
+        >
+          <JIcon name="plus" /> New note
+        </button>
       </div>
 
+      {/* Notes grid */}
       {notes.isLoading ? (
-        <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
+        <div className="j-notes-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="j-skel" style={{ height: 140, borderRadius: 12 }} />
+          ))}
+        </div>
       ) : (notes.data || []).length === 0 ? (
-        <Card className="py-10 text-center text-sm text-muted">No notes here yet.</Card>
+        <div className="j-card" style={{ textAlign: 'center', padding: '2.5rem 1rem', opacity: 0.6 }}>
+          No notes here yet. Hit "New note" to start.
+        </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {notes.data.map((n) => (
-            <Card key={n.id} className="cursor-pointer hover:border-line-bright" onClick={() => open(n)}>
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-medium text-primary">{n.title}</h3>
-                <button onClick={(e) => { e.stopPropagation(); confirm('Delete note?') && remove.mutate({ url: `/notes/${n.id}` }); }}
-                  className="text-white/30 hover:text-red-400"><Trash2 size={14} /></button>
+        <div className="j-notes-grid">
+          {(notes.data || []).map((n) => (
+            <div key={n.id} className="j-note">
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                <span className="j-habit-name" style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {n.title}
+                </span>
+                <button
+                  className="j-ghost-btn"
+                  style={{ color: 'var(--text-muted)', flexShrink: 0 }}
+                  onClick={(e) => handleDelete(e, n.id)}
+                  title="Delete"
+                >
+                  <JIcon name="trash" />
+                </button>
               </div>
-              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-muted">{n.content}</p>
-              <p className="mt-2 text-[11px] text-white/30">
-                {formatDistanceToNow(new Date(n.updated_at + 'Z'), { addSuffix: true })}
+              <p style={{
+                marginTop: 6,
+                fontSize: 13,
+                color: 'var(--text-muted)',
+                display: '-webkit-box',
+                WebkitLineClamp: 3,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                whiteSpace: 'pre-wrap',
+                lineHeight: 1.5,
+              }}>
+                {n.content}
               </p>
-            </Card>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+                <span className="j-note-date">{fmtDate(n.updated_at)}</span>
+                {n.project_id && (
+                  <span
+                    className="j-tag"
+                    style={{ background: projectColor(n.project_id) + '33', color: projectColor(n.project_id), border: 'none', fontSize: 11 }}
+                  >
+                    {(projects.data || []).find((p) => p.id === n.project_id)?.name || ''}
+                  </span>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       )}
 
-      <Modal open={!!editing} onClose={() => setEditing(null)} title={editing?.id ? 'Edit note' : 'New note'}>
-        <form onSubmit={submit} className="space-y-3">
-          <Input label="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-          <Input label="Content (markdown)" as="textarea" rows={10} value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })} />
-          <Input label="Tags (comma separated)" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
-          <Button type="submit" loading={save.isPending} className="w-full">Save</Button>
-        </form>
-      </Modal>
+      {/* Add note modal */}
+      {showModal && (
+        <>
+          <div className="j-modal-veil" onClick={() => setShowModal(false)} />
+          <div className="j-modal">
+            <div className="j-modal-grab" />
+            <div className="j-modal-head">
+              <span>New note</span>
+              <button className="j-ghost-btn" onClick={() => setShowModal(false)}><JIcon name="x" /></button>
+            </div>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '0 1rem 1.25rem' }}>
+              <div className="j-input-group">
+                <label className="j-label">Title</label>
+                <input
+                  className="j-input"
+                  placeholder="Note title"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="j-input-group">
+                <label className="j-label">Content</label>
+                <textarea
+                  className="j-input"
+                  placeholder="Write something…"
+                  rows={7}
+                  value={form.content}
+                  onChange={(e) => setForm({ ...form, content: e.target.value })}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+              {(projects.data || []).length > 0 && (
+                <div className="j-input-group">
+                  <label className="j-label">Project</label>
+                  <select
+                    className="j-input"
+                    value={activeProject || ''}
+                    onChange={(e) => setActiveProject(e.target.value ? Number(e.target.value) : null)}
+                  >
+                    <option value="">None</option>
+                    {(projects.data || []).map((p) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <button type="submit" className="j-btn j-btn-primary" disabled={addNote.isPending}>
+                {addNote.isPending ? 'Saving…' : 'Save note'}
+              </button>
+            </form>
+          </div>
+        </>
+      )}
     </div>
   );
 }

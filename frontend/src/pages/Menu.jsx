@@ -1,71 +1,135 @@
-import { Sparkles, ShoppingCart } from 'lucide-react';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { useState } from 'react';
 import { useGet, useAction } from '../hooks/useApi';
+import JIcon from '../components/ui/JIcon.jsx';
+import TiltCard from '../components/ui/TiltCard.jsx';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const MEALS = ['breakfast', 'lunch', 'dinner'];
 
-export default function Menu() {
-  const menu = useGet('menu', '/menu/current');
-  const generate = useAction({ url: '/menu/generate', invalidate: ['menu'], successMessage: 'Menu generated' });
-  const toggle = useAction({ method: 'put', invalidate: ['menu'] });
+function todayName() {
+  return new Date().toLocaleDateString('en', { weekday: 'long' }).toLowerCase();
+}
 
-  if (menu.isLoading) return <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>;
+export default function Menu() {
+  const menu = useGet('menu', '/api/menu/current');
+  const generate = useAction({
+    method: 'post',
+    url: '/api/menu/generate',
+    invalidate: ['menu'],
+  });
+  const updateShopping = useAction({
+    method: 'put',
+    url: '/api/menu/__placeholder__/shopping',
+    invalidate: ['menu'],
+  });
+
+  const [checkedItems, setCheckedItems] = useState({});
 
   const plan = menu.data;
+  const today = todayName();
+
+  const handleGenerateClick = () => {
+    generate.mutate({});
+  };
+
+  const handleShoppingToggle = (i, checked) => {
+    if (!plan) return;
+    setCheckedItems((prev) => ({ ...prev, [i]: checked }));
+    const updatedList = (plan.shopping_list || []).map((item, idx) =>
+      idx === i ? { ...item, checked } : item
+    );
+    updateShopping.mutate({ _url: `/api/menu/${plan.id}/shopping`, shopping_list: updatedList });
+  };
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">{plan ? `Week of ${plan.week_start}` : 'No menu for this week yet.'}</p>
-        <Button loading={generate.isPending} onClick={() => generate.mutate({ data: {} })}>
-          <Sparkles size={15} /> {plan ? 'Regenerate' : 'Generate with Claude'}
-        </Button>
+    <div className="j-screen-col">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span className="j-sec-title">Weekly Menu</span>
+        <button
+          className="j-btn j-btn-primary"
+          onClick={handleGenerateClick}
+          disabled={generate.isPending}
+        >
+          <JIcon name="sparkles" />
+          {generate.isPending ? 'Generating…' : plan ? 'Regenerate' : 'Generate with AI'}
+        </button>
       </div>
 
       {generate.isPending && (
-        <Card className="flex items-center justify-center gap-3 py-10 text-sm text-muted">
-          <LoadingSpinner /> Claude is planning your week…
-        </Card>
+        <div className="j-card j-now" style={{ textAlign: 'center', padding: '2rem', marginBottom: 12 }}>
+          <JIcon name="sparkles" />
+          <span style={{ marginLeft: 8, opacity: 0.7 }}>Claude is planning your week…</span>
+        </div>
+      )}
+
+      {!plan && !generate.isPending && (
+        <div className="j-card" style={{ textAlign: 'center', padding: '2.5rem 1rem', opacity: 0.6 }}>
+          No menu for this week yet. Generate one with AI.
+        </div>
       )}
 
       {plan && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {DAYS.map((day) => (
-              <Card key={day}>
-                <h3 className="mb-2 text-sm font-medium capitalize text-primary">{day}</h3>
-                <div className="space-y-2 text-sm">
-                  {MEALS.map((meal) => (
-                    <div key={meal}>
-                      <span className="label !text-[10px]">{meal}</span>
-                      <p className="text-white/75">{plan.meals?.[day]?.[meal] || '—'}</p>
+          {plan.days && (
+            <div className="j-menu-week" style={{ marginBottom: 16 }}>
+              {DAYS.map((day) => {
+                const dayData = (plan.days || []).find((d) => d.day?.toLowerCase() === day) || {};
+                const isToday = day === today;
+                return (
+                  <TiltCard key={day}>
+                    <div className={isToday ? 'j-meal j-meal today' : 'j-meal'}>
+                      <div className="j-meal-day">
+                        {day.charAt(0).toUpperCase() + day.slice(1)}
+                        {isToday && <span className="j-badge" style={{ marginLeft: 6 }}>Today</span>}
+                      </div>
+                      {MEALS.map((meal) => (
+                        <div key={meal} style={{ marginTop: 6 }}>
+                          <span className="j-eyebrow">{meal}</span>
+                          <div className="j-meal-name">{dayData[meal] || <span style={{ opacity: 0.35 }}>—</span>}</div>
+                        </div>
+                      ))}
+                      {dayData.notes && (
+                        <div className="j-meal-note" style={{ marginTop: 8 }}>{dayData.notes}</div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </Card>
-            ))}
-          </div>
-
-          <Card>
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
-              <ShoppingCart size={16} /> Shopping list
-            </h3>
-            <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
-              {(plan.shopping_list || []).map((item, i) => (
-                <label key={i} className="flex cursor-pointer items-center gap-2 py-1 text-sm">
-                  <input type="checkbox" checked={!!item.checked}
-                    onChange={(e) => toggle.mutate({ url: `/menu/${plan.id}/shopping`, data: { index: i, checked: e.target.checked } })}
-                    className="h-4 w-4 rounded accent-violet-600" />
-                  <span className={item.checked ? 'text-white/30 line-through' : 'text-white/75'}>
-                    {item.item} {item.quantity && <span className="text-muted">({item.quantity})</span>}
-                  </span>
-                </label>
-              ))}
+                  </TiltCard>
+                );
+              })}
             </div>
-          </Card>
+          )}
+
+          {/* Shopping list */}
+          <div className="j-panel">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <JIcon name="shopping-cart" />
+              <span className="j-sec-title" style={{ fontSize: 15 }}>Shopping list</span>
+            </div>
+            {(plan.shopping_list || []).length === 0 ? (
+              <div style={{ opacity: 0.5, fontSize: 13 }}>No items yet.</div>
+            ) : (
+              <div className="j-checklist">
+                {(plan.shopping_list || []).map((item, i) => {
+                  const checked = checkedItems[i] !== undefined ? checkedItems[i] : !!item.checked;
+                  return (
+                    <label key={i} className={checked ? 'j-checkitem j-checkitem done' : 'j-checkitem'}>
+                      <input
+                        type="checkbox"
+                        className="j-checkbox"
+                        checked={checked}
+                        onChange={(e) => handleShoppingToggle(i, e.target.checked)}
+                      />
+                      <span>
+                        {item.item}
+                        {item.quantity && (
+                          <span style={{ opacity: 0.5, marginLeft: 4 }}>({item.quantity})</span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

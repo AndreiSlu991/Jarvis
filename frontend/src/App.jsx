@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
-import Card from './components/ui/Card';
-import Button from './components/ui/Button';
 import Input from './components/ui/Input';
+import Button from './components/ui/Button';
 import { useAuth } from './hooks/useAuth';
+import { useAppStore } from './store/appStore';
+import { initBg } from './lib/jarvisBackground';
 
 import Dashboard from './pages/Dashboard';
 import Habits from './pages/Habits';
@@ -29,48 +30,86 @@ function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm" variant="elevated">
-        <h1 className="mb-1 text-center text-2xl font-bold text-primary">
-          JARVIS<span className="text-accent">.</span>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div className="j-card" style={{ width: '100%', maxWidth: 360, padding: '2rem' }}>
+        <h1 style={{ textAlign: 'center', fontSize: '1.75rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+          JARVIS<span style={{ color: 'var(--accent)' }}>.</span>
         </h1>
-        <p className="mb-6 text-center text-sm text-muted">Your personal assistant</p>
-        <form onSubmit={submit} className="space-y-3">
-          <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
-          <Button type="submit" loading={loading} className="w-full">
+        <p style={{ textAlign: 'center', color: 'var(--dim)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+          Your personal assistant
+        </p>
+        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+          <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} />
+          <Button type="submit" loading={loading} style={{ width: '100%', marginTop: '0.25rem' }}>
             {mode === 'login' ? 'Sign in' : 'Create account'}
           </Button>
         </form>
         <button
-          className="mt-4 w-full text-center text-xs text-muted hover:text-white/75"
-          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          style={{ marginTop: '1rem', width: '100%', textAlign: 'center', fontSize: '0.75rem', color: 'var(--faint)', background: 'none', border: 'none', cursor: 'pointer' }}
+          onClick={() => setMode(m => m === 'login' ? 'register' : 'login')}
         >
-          {mode === 'login' ? "No account? Register" : 'Have an account? Sign in'}
+          {mode === 'login' ? 'No account? Register' : 'Have an account? Sign in'}
         </button>
-      </Card>
+      </div>
     </div>
   );
 }
 
+function BgCanvas() {
+  const canvasRef = useRef(null);
+  const tweaks = useAppStore(s => s.tweaks);
+  const bgRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = document.getElementById('bg-canvas');
+    if (!canvas) return;
+    bgRef.current = initBg(canvas);
+    return () => bgRef.current?.destroy();
+  }, []);
+
+  useEffect(() => {
+    bgRef.current?.set({ accent: tweaks.accent, motion: tweaks.motion });
+  }, [tweaks]);
+
+  return null;
+}
+
 export default function App() {
   const { isAuthenticated } = useAuth();
-  if (!isAuthenticated) return <Login />;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        document.dispatchEvent(new CustomEvent('jarvis:palette'));
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/habits" element={<Habits />} />
-        <Route path="/notes" element={<Notes />} />
-        <Route path="/menu" element={<Menu />} />
-        <Route path="/budget" element={<Budget />} />
-        <Route path="/fitness" element={<Fitness />} />
-        <Route path="/bike" element={<Bike />} />
-        <Route path="/work" element={<Work />} />
-        <Route path="/blajeni" element={<Blajeni />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    </Routes>
+    <>
+      <BgCanvas />
+      {!isAuthenticated ? (
+        <Login />
+      ) : (
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/habits" element={<Habits />} />
+            <Route path="/notes" element={<Notes />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/budget" element={<Budget />} />
+            <Route path="/fitness" element={<Fitness />} />
+            <Route path="/bike" element={<Bike />} />
+            <Route path="/work" element={<Work />} />
+            <Route path="/blajeni" element={<Blajeni />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      )}
+    </>
   );
 }
