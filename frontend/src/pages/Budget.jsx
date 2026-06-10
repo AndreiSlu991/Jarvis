@@ -74,12 +74,12 @@ export default function Budget() {
           <Upload size={15} /> Import CSV
         </Button>
         <Button variant="secondary" loading={uploading === 'pdf'} onClick={() => pdfRef.current.click()}>
-          <FileText size={15} /> Salary PDF
+          <FileText size={15} /> Salary slip
         </Button>
         <Button variant="secondary" onClick={gmailConnect}><Mail size={15} /> Gmail</Button>
         <Button className="ml-auto" onClick={() => setModal(true)}><Plus size={15} /> Add</Button>
         <input ref={csvRef} type="file" accept=".csv" hidden onChange={(e) => e.target.files[0] && uploadImport('csv', e.target.files[0])} />
-        <input ref={pdfRef} type="file" accept=".pdf" hidden onChange={(e) => e.target.files[0] && uploadImport('pdf', e.target.files[0])} />
+        <input ref={pdfRef} type="file" accept=".pdf,.png,.jpg,.jpeg" hidden onChange={(e) => e.target.files[0] && uploadImport('pdf', e.target.files[0])} />
       </div>
 
       {s?.by_category?.length > 0 && (

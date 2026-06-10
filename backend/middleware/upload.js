@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
 });
 
 const AUDIO_EXT = ['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.mp4'];
-const FILE_EXT = ['.pdf', '.fit', '.csv'];
+const FILE_EXT = ['.pdf', '.fit', '.csv', '.png', '.jpg', '.jpeg'];
 
 function makeFilter(allowed) {
   return (_req, file, cb) => {

@@ -73,28 +73,54 @@ router.post('/import/csv', uploadFile.single('file'), (req, res) => {
   }
 });
 
-// Salary slip PDF — extracts net pay amount via text heuristics.
+// Salary slip — PDF, PNG, or JPEG. Extracts net pay via text heuristics (PDF) or Claude vision (image).
 router.post('/import/pdf', uploadFile.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const ext = req.file.filename.split('.').pop().toLowerCase();
+  const isImage = ['png', 'jpg', 'jpeg'].includes(ext);
   try {
-    const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
-    const data = await pdfParse(fs.readFileSync(req.file.path));
-    const text = data.text;
-    const netMatch = text.match(/(?:net(?:\s+pay)?|rest\s+de\s+plata|salariu\s+net)[^\d-]*([\d.,]+)/i);
+    let text = '';
+
+    if (isImage) {
+      // Use Claude vision to extract text from the salary slip image.
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
+      if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not configured');
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const imageData = fs.readFileSync(req.file.path).toString('base64');
+      const mediaType = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const msg = await client.messages.create({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: imageData } },
+            { type: 'text', text: 'Extract all text from this salary slip. Return only the raw text content, preserving numbers and labels.' }
+          ]
+        }]
+      });
+      text = msg.content.filter((b) => b.type === 'text').map((b) => b.text).join('');
+    } else {
+      const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
+      const data = await pdfParse(fs.readFileSync(req.file.path));
+      text = data.text;
+    }
+
+    const netMatch = text.match(/(?:net(?:\s+pay)?|rest\s+de\s+plat[aă]|salariu\s+net)[^\d-]*([\d.,]+)/i);
     let transaction = null;
     if (netMatch) {
       const amount = parseFloat(netMatch[1].replace(/\./g, '').replace(',', '.'));
       if (!isNaN(amount)) {
         const date = new Date().toISOString().slice(0, 10);
         const info = db
-          .prepare("INSERT INTO transactions (user_id, date, amount, description, category, source) VALUES (?, ?, ?, 'Salary (PDF import)', 'income', 'pdf')")
+          .prepare("INSERT INTO transactions (user_id, date, amount, description, category, source) VALUES (?, ?, ?, 'Salary (slip import)', 'income', 'pdf')")
           .run(req.user.id, date, amount);
         transaction = db.prepare('SELECT * FROM transactions WHERE id = ?').get(info.lastInsertRowid);
       }
     }
     res.json({ text: text.slice(0, 5000), transaction, parsed: !!transaction });
   } catch (err) {
-    res.status(400).json({ error: `PDF parse failed: ${err.message}` });
+    res.status(400).json({ error: `Salary slip parse failed: ${err.message}` });
   } finally {
     fs.unlink(req.file.path, () => {});
   }
