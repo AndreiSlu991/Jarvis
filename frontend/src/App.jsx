@@ -16,6 +16,7 @@ import Fitness from './pages/Fitness';
 import Bike from './pages/Bike';
 import Work from './pages/Work';
 import Blajeni from './pages/Blajeni';
+import Car from './pages/Car';
 
 function Login() {
   const { login, register, loading } = useAuth();
@@ -106,6 +107,7 @@ export default function App() {
             <Route path="/bike" element={<Bike />} />
             <Route path="/work" element={<Work />} />
             <Route path="/blajeni" element={<Blajeni />} />
+            <Route path="/car" element={<Car />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

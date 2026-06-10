@@ -13,6 +13,7 @@ const MORE = [
   { to: '/fitness', icon: 'fitness', label: 'Fitness' },
   { to: '/bike',    icon: 'bike',    label: 'Bike' },
   { to: '/work',    icon: 'work',    label: 'Work' },
+  { to: '/car',     icon: 'car',     label: 'Mașina' },
   { to: '/blajeni', icon: 'blajeni', label: 'Blajeni' },
 ];
 

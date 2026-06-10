@@ -141,10 +141,107 @@ export function initSchema() {
       UNIQUE(user_id, date)
     );
 
+    -- Blajeni v2
+    CREATE TABLE IF NOT EXISTS blajeni_topics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      status TEXT DEFAULT 'planned',
+      notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS blajeni_shopping_lists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      category TEXT DEFAULT 'diverse',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS blajeni_shopping_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      list_id INTEGER NOT NULL REFERENCES blajeni_shopping_lists(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      quantity REAL DEFAULT 1,
+      unit TEXT DEFAULT 'buc',
+      estimated_price REAL DEFAULT 0,
+      bought INTEGER DEFAULT 0,
+      store_suggestion TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS blajeni_tools (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      brand TEXT DEFAULT '',
+      model TEXT DEFAULT '',
+      category TEXT DEFAULT 'general',
+      purchase_date TEXT DEFAULT '',
+      purchase_price REAL DEFAULT 0,
+      store TEXT DEFAULT '',
+      condition TEXT DEFAULT 'good',
+      manual_url TEXT DEFAULT '',
+      manual_file TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Masina module
+    CREATE TABLE IF NOT EXISTS car_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      expiry_date TEXT NOT NULL,
+      reminder_days INTEGER DEFAULT 30,
+      notes TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS car_maintenance (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      date TEXT NOT NULL,
+      km INTEGER DEFAULT 0,
+      next_km INTEGER DEFAULT 0,
+      cost REAL DEFAULT 0,
+      description TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS car_fuel_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      date TEXT NOT NULL,
+      liters REAL NOT NULL,
+      price_per_liter REAL NOT NULL,
+      km_odometer INTEGER NOT NULL,
+      station TEXT DEFAULT '',
+      full_tank INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS car_info (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+      make TEXT DEFAULT '',
+      model TEXT DEFAULT '',
+      year INTEGER DEFAULT 0,
+      fuel_type TEXT DEFAULT 'benzina',
+      manual_url TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date);
     CREATE INDEX IF NOT EXISTS idx_notes_project ON notes(project_id);
     CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(user_id, date);
     CREATE INDEX IF NOT EXISTS idx_bike_date ON bike_activities(user_id, date);
+    CREATE INDEX IF NOT EXISTS idx_car_docs_expiry ON car_documents(user_id, expiry_date);
+    CREATE INDEX IF NOT EXISTS idx_car_fuel_date ON car_fuel_logs(user_id, date);
   `);
 }
 

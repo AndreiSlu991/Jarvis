@@ -6,7 +6,7 @@ import CommandPalette from './CommandPalette.jsx';
 const TITLES = {
   '/': 'Dashboard', '/habits': 'Habits', '/notes': 'Notes',
   '/menu': 'Weekly Menu', '/budget': 'Budget', '/fitness': 'Fitness',
-  '/bike': 'Bike', '/work': 'Work', '/blajeni': 'Blajeni House',
+  '/bike': 'Bike', '/work': 'Work', '/blajeni': 'Blajeni House', '/car': 'Mașina',
 };
 
 export default function Layout() {

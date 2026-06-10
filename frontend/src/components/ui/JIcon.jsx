@@ -1,4 +1,5 @@
 const PATHS = {
+  car: <><path d="M5 17H3a2 2 0 01-2-2V9l2-4h14l2 4v6a2 2 0 01-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M9 17h6"/></>,
   home: <><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></>,
   habits: <><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/></>,
   notes: <><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></>,

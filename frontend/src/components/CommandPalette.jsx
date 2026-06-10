@@ -12,6 +12,7 @@ const COMMANDS = [
   { id: 'bike',    label: 'Bike',             kind: 'nav', icon: 'bike',    to: '/bike' },
   { id: 'work',    label: 'Work Recordings',  kind: 'nav', icon: 'work',    to: '/work' },
   { id: 'blajeni', label: 'Blajeni House',    kind: 'nav', icon: 'blajeni', to: '/blajeni' },
+  { id: 'car',     label: 'Mașina',          kind: 'nav', icon: 'car',     to: '/car' },
 ];
 
 export default function CommandPalette({ open, onClose }) {
