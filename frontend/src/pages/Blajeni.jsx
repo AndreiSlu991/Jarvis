@@ -2,8 +2,6 @@ import { useState } from 'react';
 import TiltCard from '../components/ui/TiltCard.jsx';
 import JIcon from '../components/ui/JIcon.jsx';
 import { useGet, useAction } from '../hooks/useApi';
-import api from '../api/client';
-import { useQueryClient } from '@tanstack/react-query';
 
 const COLUMNS = [
   { key: 'todo', label: 'To Do' },
@@ -11,131 +9,220 @@ const COLUMNS = [
   { key: 'done', label: 'Done' },
 ];
 
-export default function Blajeni() {
-  const { data: tasks, isLoading: tasksLoading } = useGet('blajeni-tasks', '/api/blajeni/tasks');
-  const { data: notes } = useGet('blajeni-notes', '/api/blajeni/notes');
-  const qc = useQueryClient();
-  const saveTask = useAction({ method: 'post', url: '/api/blajeni/tasks', invalidate: ['blajeni-tasks'] });
-  const saveNote = useAction({ method: 'post', url: '/api/blajeni/notes', invalidate: ['blajeni-notes'] });
-  const [showTask, setShowTask] = useState(false);
-  const [showNote, setShowNote] = useState(false);
-  const [taskForm, setTaskForm] = useState({ title: '', priority: 'medium', status: 'todo' });
-  const [noteContent, setNoteContent] = useState('');
+const PRIORITIES = ['low', 'medium', 'high'];
 
-  async function move(task, dir) {
-    const idx = COLUMNS.findIndex(c => c.key === task.status);
+function priorityBadgeClass(p) {
+  if (p === 'high') return 'j-badge high';
+  if (p === 'low') return 'j-badge low';
+  return 'j-badge medium';
+}
+
+export default function Blajeni() {
+  const tasks = useGet(['blajeni-tasks'], '/blajeni/tasks');
+  const notes = useGet(['blajeni-notes'], '/blajeni/notes');
+
+  const saveTask = useAction({ url: '/blajeni/tasks', invalidate: [['blajeni-tasks']], successMessage: 'Task created' });
+  const moveTask = useAction({ method: 'put', invalidate: [['blajeni-tasks']] });
+  const deleteTask = useAction({ method: 'delete', invalidate: [['blajeni-tasks']] });
+  const saveNote = useAction({ url: '/blajeni/notes', invalidate: [['blajeni-notes']], successMessage: 'Note saved' });
+
+  const [taskModal, setTaskModal] = useState(false);
+  const [noteModal, setNoteModal] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: '', priority: 'medium', status: 'todo' });
+  const [noteForm, setNoteForm] = useState({ content: '' });
+
+  const allTasks = tasks.data ?? [];
+
+  function move(task, dir) {
+    const idx = COLUMNS.findIndex((c) => c.key === task.status);
     const next = COLUMNS[idx + dir];
-    if (!next) return;
-    await api.put(`/api/blajeni/tasks/${task.id}`, { status: next.key });
-    qc.invalidateQueries({ queryKey: ['blajeni-tasks'] });
+    if (next) moveTask.mutate({ url: `/blajeni/tasks/${task.id}`, data: { status: next.key } });
   }
 
-  const submitTask = async (e) => {
-    e.preventDefault();
-    await saveTask.mutateAsync({ data: taskForm });
-    setTaskForm({ title: '', priority: 'medium', status: 'todo' });
-    setShowTask(false);
-  };
-
-  const submitNote = async (e) => {
-    e.preventDefault();
-    await saveNote.mutateAsync({ data: { content: noteContent } });
-    setNoteContent('');
-    setShowNote(false);
-  };
-
   return (
-    <div className="j-screen j-screen-col">
-      {/* Header actions */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
-        <button className="j-btn j-btn-primary j-btn-sm" onClick={() => setShowTask(s => !s)}>
-          <JIcon name="plus" size={13} /> Task
-        </button>
-        <button className="j-btn j-btn-ghost j-btn-sm" onClick={() => setShowNote(s => !s)}>
-          <JIcon name="notes" size={13} /> Note
-        </button>
+    <div className="j-screen-col">
+      {/* toolbar */}
+      <div className="j-row-head">
+        <div className="j-sec-title">Blajeni Tasks</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="j-btn j-btn-ghost j-btn-sm" onClick={() => setNoteModal(true)}>
+            <JIcon name="note" /> Note
+          </button>
+          <button className="j-btn j-btn-primary j-btn-sm" onClick={() => setTaskModal(true)}>
+            <JIcon name="plus" /> Task
+          </button>
+        </div>
       </div>
 
-      {showTask && (
-        <TiltCard className="j-card j-panel">
-          <form onSubmit={submitTask} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="j-input-group">
-              <label className="j-label">Task title</label>
-              <input className="j-input" value={taskForm.title} onChange={e => setTaskForm(f => ({...f, title: e.target.value}))} required placeholder="e.g. Install fence posts" />
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <div className="j-input-group" style={{ flex: 1 }}>
-                <label className="j-label">Priority</label>
-                <select className="j-input" value={taskForm.priority} onChange={e => setTaskForm(f => ({...f, priority: e.target.value}))}>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
+      {/* kanban board */}
+      {tasks.isLoading ? (
+        <div className="j-skel" style={{ height: 300 }} />
+      ) : (
+        <div className="j-kanban">
+          {COLUMNS.map((col, colIdx) => {
+            const colTasks = allTasks.filter((t) => t.status === col.key);
+            return (
+              <div key={col.key} className="j-kanban-col">
+                <div className="j-eyebrow" style={{ marginBottom: 10 }}>
+                  {col.label} <span style={{ opacity: 0.5 }}>({colTasks.length})</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {colTasks.length === 0 && (
+                    <p style={{ fontSize: 12, color: 'var(--fg-muted)', textAlign: 'center', padding: '12px 0' }}>Empty</p>
+                  )}
+                  {colTasks.map((t) => (
+                    <TiltCard key={t.id} className="j-task">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div className={`j-task-title${t.status === 'done' ? ' done' : ''}`}>{t.title}</div>
+                          {t.description && <div className="j-task-sub">{t.description}</div>}
+                          <div style={{ marginTop: 6 }}>
+                            <span className={priorityBadgeClass(t.priority)}>{t.priority}</span>
+                          </div>
+                        </div>
+                        <button
+                          className="j-btn j-btn-ghost j-btn-sm"
+                          style={{ color: 'var(--red)', flexShrink: 0 }}
+                          onClick={() => window.confirm('Delete task?') && deleteTask.mutate({ url: `/blajeni/tasks/${t.id}` })}
+                        >
+                          <JIcon name="trash" />
+                        </button>
+                      </div>
+                      <div className="j-task-arrows">
+                        <button
+                          className="j-btn j-btn-ghost j-btn-sm"
+                          disabled={colIdx === 0}
+                          onClick={() => move(t, -1)}
+                        >
+                          <JIcon name="chevron-left" />
+                        </button>
+                        <button
+                          className="j-btn j-btn-ghost j-btn-sm"
+                          disabled={colIdx === COLUMNS.length - 1}
+                          onClick={() => move(t, 1)}
+                        >
+                          <JIcon name="chevron-right" />
+                        </button>
+                      </div>
+                    </TiltCard>
+                  ))}
+                </div>
               </div>
-              <div className="j-input-group" style={{ flex: 1 }}>
-                <label className="j-label">Status</label>
-                <select className="j-input" value={taskForm.status} onChange={e => setTaskForm(f => ({...f, status: e.target.value}))}>
-                  {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-                </select>
-              </div>
-            </div>
-            <button className="j-btn j-btn-primary j-btn-sm" type="submit">Create task</button>
-          </form>
-        </TiltCard>
+            );
+          })}
+        </div>
       )}
 
-      {showNote && (
-        <TiltCard className="j-card j-panel">
-          <form onSubmit={submitNote} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div className="j-input-group">
-              <label className="j-label">Note</label>
-              <textarea className="j-input" rows={4} value={noteContent} onChange={e => setNoteContent(e.target.value)} required placeholder="Write a note about the house project…" style={{ resize: 'vertical' }} />
-            </div>
-            <button className="j-btn j-btn-primary j-btn-sm" type="submit">Save note</button>
-          </form>
-        </TiltCard>
-      )}
-
-      {/* Kanban */}
-      <div className="j-kanban">
-        {COLUMNS.map((col, colIdx) => {
-          const colTasks = (tasks || []).filter(t => t.status === col.key);
-          return (
-            <div key={col.key} className="j-kanban-col">
-              <h3>{col.label} <span style={{ color: 'var(--dim)' }}>({colTasks.length})</span></h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {tasksLoading && colIdx === 0 && [1,2].map(i => <div key={i} className="j-skel" style={{ height: 70 }} />)}
-                {colTasks.map(t => (
-                  <TiltCard key={t.id} className="j-card j-task">
-                    <div className={`j-task-title${t.status === 'done' ? ' done' : ''}`}>{t.title}</div>
-                    <div className="j-task-arrows">
-                      <button disabled={colIdx === 0} onClick={() => move(t, -1)}>←</button>
-                      <span className={`j-badge j-badge-${t.priority || 'low'}`}>{t.priority}</span>
-                      <button disabled={colIdx === COLUMNS.length - 1} onClick={() => move(t, 1)}>→</button>
-                    </div>
-                  </TiltCard>
-                ))}
+      {/* notes section */}
+      <div className="j-card">
+        <div className="j-sec-title" style={{ marginBottom: 12 }}>Notes</div>
+        {notes.isLoading ? (
+          <div className="j-skel" style={{ height: 100 }} />
+        ) : (notes.data ?? []).length === 0 ? (
+          <p style={{ textAlign: 'center', color: 'var(--fg-muted)', padding: '16px 0', fontSize: 14 }}>No notes yet.</p>
+        ) : (
+          <div className="j-memos">
+            {notes.data.map((n) => (
+              <div key={n.id} className="j-memo">
+                {n.title && <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{n.title}</div>}
+                <div style={{ fontSize: 13, color: 'var(--fg-muted)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{n.content}</div>
+                {n.created_at && (
+                  <div style={{ fontSize: 11, color: 'var(--fg-muted)', marginTop: 6, opacity: 0.6 }}>{n.created_at?.slice(0, 10)}</div>
+                )}
               </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Notes */}
-      {(notes || []).length > 0 && (
-        <>
-          <div className="j-sec-title" style={{ marginTop: 8 }}>
-            <JIcon name="notes" size={12} /> HOUSE NOTES
-          </div>
-          <div className="j-notes-grid">
-            {notes.map(n => (
-              <TiltCard key={n.id} className="j-card j-note">
-                <p style={{ color: 'var(--dim)', fontSize: 14, whiteSpace: 'pre-wrap', WebkitLineClamp: 5, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.content}</p>
-                <span className="j-note-date">{n.created_at?.slice(0,10)}</span>
-              </TiltCard>
             ))}
           </div>
-        </>
+        )}
+      </div>
+
+      {/* add task modal */}
+      {taskModal && (
+        <div className="j-modal-veil" onClick={() => setTaskModal(false)}>
+          <div className="j-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="j-modal-grab" />
+            <div className="j-modal-head">New Task</div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await saveTask.mutateAsync({ data: taskForm });
+                setTaskModal(false);
+                setTaskForm({ title: '', priority: 'medium', status: 'todo' });
+              }}
+            >
+              <div className="j-input-group">
+                <label className="j-label">Title</label>
+                <input
+                  className="j-input"
+                  value={taskForm.title}
+                  onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="j-input-group">
+                <label className="j-label">Priority</label>
+                <select
+                  className="j-input"
+                  value={taskForm.priority}
+                  onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                >
+                  {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div className="j-input-group">
+                <label className="j-label">Status</label>
+                <select
+                  className="j-input"
+                  value={taskForm.status}
+                  onChange={(e) => setTaskForm({ ...taskForm, status: e.target.value })}
+                >
+                  {COLUMNS.map((c) => <option key={c.key} value={c.key}>{c.label}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button type="button" className="j-btn j-btn-ghost" style={{ flex: 1 }} onClick={() => setTaskModal(false)}>Cancel</button>
+                <button type="submit" className="j-btn j-btn-primary" style={{ flex: 1 }} disabled={saveTask.isPending}>
+                  {saveTask.isPending ? 'Saving…' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* add note modal */}
+      {noteModal && (
+        <div className="j-modal-veil" onClick={() => setNoteModal(false)}>
+          <div className="j-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="j-modal-grab" />
+            <div className="j-modal-head">New Note</div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await saveNote.mutateAsync({ data: noteForm });
+                setNoteModal(false);
+                setNoteForm({ content: '' });
+              }}
+            >
+              <div className="j-input-group">
+                <label className="j-label">Content</label>
+                <textarea
+                  className="j-input"
+                  rows={5}
+                  value={noteForm.content}
+                  onChange={(e) => setNoteForm({ ...noteForm, content: e.target.value })}
+                  required
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button type="button" className="j-btn j-btn-ghost" style={{ flex: 1 }} onClick={() => setNoteModal(false)}>Cancel</button>
+                <button type="submit" className="j-btn j-btn-primary" style={{ flex: 1 }} disabled={saveNote.isPending}>
+                  {saveNote.isPending ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
