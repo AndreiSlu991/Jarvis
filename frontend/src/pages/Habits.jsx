@@ -63,7 +63,7 @@ export default function Habits() {
         <Button onClick={() => openModal(null)}><Plus size={16} /> New habit</Button>
       </div>
       {(habits.data || []).length === 0 && (
-        <Card className="text-center text-sm text-gray-500 py-10">No habits yet. Create your first one.</Card>
+        <Card className="text-center text-sm text-muted py-10">No habits yet. Create your first one.</Card>
       )}
       {(habits.data || []).map((h) => {
         const done = doneIds.has(h.id);
@@ -73,8 +73,8 @@ export default function Habits() {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => log.mutate({ url: `/habits/${h.id}/log`, data: { completed: !done } })}
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
-                  done ? 'border-green-400 bg-green-500/20 text-green-300' : 'border-gray-600 text-transparent hover:border-gray-400'
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 ${
+                  done ? 'border-green-400 bg-green-500/20 text-green-300' : 'border-white/20 text-transparent hover:border-white/50'
                 }`}
               >
                 <Check size={18} />
@@ -82,12 +82,12 @@ export default function Habits() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ background: h.color }} />
-                  <span className="font-medium text-gray-100">{h.name}</span>
+                  <span className="font-medium text-primary">{h.name}</span>
                   {s?.streak > 0 && (
                     <span className="flex items-center gap-1 text-xs text-orange-400"><Flame size={12} />{s.streak}d</span>
                   )}
                 </div>
-                {h.description && <p className="truncate text-xs text-gray-500">{h.description}</p>}
+                {h.description && <p className="truncate text-xs text-muted">{h.description}</p>}
               </div>
               <div className="hidden sm:block"><Heatmap recent={s?.recent} /></div>
               <div className="flex gap-1">
@@ -108,7 +108,7 @@ export default function Habits() {
           <Input label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <Input label="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
           <div>
-            <span className="mb-1 block text-xs font-medium text-gray-400">Color</span>
+            <span className="mb-1 block text-xs font-medium text-muted">Color</span>
             <div className="flex gap-2">
               {COLORS.map((c) => (
                 <button key={c} type="button" onClick={() => setForm({ ...form, color: c })}

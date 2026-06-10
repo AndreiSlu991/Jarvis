@@ -31,10 +31,10 @@ function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm" variant="elevated">
-        <h1 className="mb-1 text-center text-2xl font-bold text-gray-100">
+        <h1 className="mb-1 text-center text-2xl font-bold text-primary">
           JARVIS<span className="text-accent">.</span>
         </h1>
-        <p className="mb-6 text-center text-sm text-gray-500">Your personal assistant</p>
+        <p className="mb-6 text-center text-sm text-muted">Your personal assistant</p>
         <form onSubmit={submit} className="space-y-3">
           <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={8} />
@@ -43,7 +43,7 @@ function Login() {
           </Button>
         </form>
         <button
-          className="mt-4 w-full text-center text-xs text-gray-500 hover:text-gray-300"
+          className="mt-4 w-full text-center text-xs text-muted hover:text-white/75"
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
         >
           {mode === 'login' ? "No account? Register" : 'Have an account? Sign in'}

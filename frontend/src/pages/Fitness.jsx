@@ -23,7 +23,7 @@ export default function Fitness() {
     <div className="mx-auto max-w-3xl space-y-4">
       <Card>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-100">
+          <h2 className="flex items-center gap-2 text-sm font-medium text-primary">
             <Dumbbell size={16} /> Today's workout · 15 min · kettlebell + bands
           </h2>
           <Button variant="secondary" loading={getAdvice.isPending}
@@ -32,7 +32,7 @@ export default function Fitness() {
           </Button>
         </div>
         {getAdvice.isPending && (
-          <div className="flex items-center gap-3 py-6 justify-center text-sm text-gray-500">
+          <div className="flex items-center gap-3 py-6 justify-center text-sm text-muted">
             <LoadingSpinner /> Adapting to your HRV and sleep…
           </div>
         )}
@@ -44,19 +44,19 @@ export default function Fitness() {
                 advice.intensity === 'low' ? 'bg-green-500/15 text-green-300' : 'bg-yellow-500/15 text-yellow-300'
               }`}>{advice.intensity} intensity</span>
             </p>
-            <p className="text-gray-400">{advice.rationale}</p>
+            <p className="text-muted">{advice.rationale}</p>
             <ul className="space-y-1.5">
               {(advice.exercises || []).map((ex, i) => (
-                <li key={i} className="flex items-center justify-between rounded-lg bg-surface-2 px-3 py-2">
-                  <span className="text-gray-200">{ex.name}</span>
-                  <span className="text-xs text-gray-500">{ex.sets}×{ex.reps} · {ex.equipment}</span>
+                <li key={i} className="flex items-center justify-between rounded-xl bg-white/[0.04] px-3 py-2">
+                  <span className="text-primary">{ex.name}</span>
+                  <span className="text-xs text-muted">{ex.sets}×{ex.reps} · {ex.equipment}</span>
                 </li>
               ))}
             </ul>
           </div>
         )}
         {!advice && !getAdvice.isPending && (
-          <p className="text-sm text-gray-500">Tap "Get plan" for a Claude-generated workout adapted to your recent HRV and sleep.</p>
+          <p className="text-sm text-muted">Tap "Get plan" for a Claude-generated workout adapted to your recent HRV and sleep.</p>
         )}
       </Card>
 
@@ -65,9 +65,9 @@ export default function Fitness() {
       </div>
 
       <Card>
-        <h3 className="mb-3 text-sm font-semibold text-gray-100">HRV trend</h3>
+        <h3 className="mb-3 text-sm font-medium text-primary">HRV trend</h3>
         {recent.filter((s) => s.hrv).length === 0 ? (
-          <p className="text-sm text-gray-500">No HRV data yet — log it with your sessions.</p>
+          <p className="text-sm text-muted">No HRV data yet — log it with your sessions.</p>
         ) : (
           <div className="flex h-24 items-end gap-1">
             {[...recent].reverse().map((s) => (
@@ -80,20 +80,20 @@ export default function Fitness() {
       </Card>
 
       <Card>
-        <h3 className="mb-2 text-sm font-semibold text-gray-100">Recent sessions</h3>
+        <h3 className="mb-2 text-sm font-medium text-primary">Recent sessions</h3>
         {sessions.isLoading ? (
           <div className="flex justify-center py-8"><LoadingSpinner /></div>
         ) : recent.length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-500">No sessions yet.</p>
+          <p className="py-4 text-center text-sm text-muted">No sessions yet.</p>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-white/5">
             {recent.map((s) => (
               <li key={s.id} className="flex items-center justify-between py-2 text-sm">
                 <div>
-                  <p className="text-gray-300">{s.date} · {s.type} · {s.duration} min</p>
-                  {s.notes && <p className="text-xs text-gray-600">{s.notes}</p>}
+                  <p className="text-white/75">{s.date} · {s.type} · {s.duration} min</p>
+                  {s.notes && <p className="text-xs text-white/30">{s.notes}</p>}
                 </div>
-                <div className="flex gap-3 text-xs text-gray-500">
+                <div className="flex gap-3 text-xs text-muted">
                   {s.hrv != null && <span className="flex items-center gap-1"><HeartPulse size={12} />{s.hrv}</span>}
                   {s.sleep_score != null && <span className="flex items-center gap-1"><Moon size={12} />{s.sleep_score}</span>}
                 </div>

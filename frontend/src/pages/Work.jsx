@@ -58,20 +58,20 @@ export default function Work() {
         onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); e.dataTransfer.files[0] && upload(e.dataTransfer.files[0]); }}
-        className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-          dragOver ? 'border-accent bg-accent/5' : 'border-line hover:border-gray-600'
+        className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all duration-150 ${
+          dragOver ? 'border-accent bg-accent/5' : 'border-line hover:border-white/20'
         }`}
       >
         {uploading ? (
-          <div className="flex flex-col items-center gap-3 text-sm text-gray-400">
+          <div className="flex flex-col items-center gap-3 text-sm text-muted">
             <LoadingSpinner size="lg" />
             Transcribing with Whisper, extracting action items with Claude…
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 text-gray-500">
+          <div className="flex flex-col items-center gap-2 text-muted">
             <Mic size={28} />
             <p className="text-sm">Drop a meeting recording here or tap to upload</p>
-            <p className="text-xs text-gray-600">mp3, wav, m4a, ogg — max 50 MB</p>
+            <p className="text-xs text-white/30">mp3, wav, m4a, ogg — max 50 MB</p>
           </div>
         )}
         <input ref={fileRef} type="file" accept=".mp3,.wav,.m4a,.ogg,.webm" hidden
@@ -81,7 +81,7 @@ export default function Work() {
       {recordings.isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
       ) : (recordings.data || []).length === 0 ? (
-        <Card className="py-8 text-center text-sm text-gray-500">No recordings yet.</Card>
+        <Card className="py-8 text-center text-sm text-muted">No recordings yet.</Card>
       ) : (
         recordings.data.map((rec) => {
           const open = (rec.action_items || []).filter((a) => !a.done).length;
@@ -89,8 +89,8 @@ export default function Work() {
             <Card key={rec.id}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-medium text-gray-100">{rec.title}</h3>
-                  <p className="text-xs text-gray-600">{rec.date}</p>
+                  <h3 className="font-medium text-primary">{rec.title}</h3>
+                  <p className="text-xs text-white/30">{rec.date}</p>
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-[11px] ${
                   open === 0 ? 'bg-green-500/15 text-green-300' : 'bg-yellow-500/15 text-yellow-300'
@@ -105,10 +105,10 @@ export default function Work() {
                     <li key={i}>
                       <label className="flex cursor-pointer items-start gap-2 text-sm">
                         <input type="checkbox" checked={!!a.done} onChange={() => toggleAction(rec, i)}
-                          className="mt-0.5 h-4 w-4 rounded accent-blue-500" />
-                        <span className={a.done ? 'text-gray-600 line-through' : 'text-gray-300'}>
+                          className="mt-0.5 h-4 w-4 rounded accent-violet-600" />
+                        <span className={a.done ? 'text-white/30 line-through' : 'text-white/75'}>
                           {a.text}
-                          {a.owner && <span className="ml-1 text-xs text-gray-500">({a.owner})</span>}
+                          {a.owner && <span className="ml-1 text-xs text-muted">({a.owner})</span>}
                         </span>
                       </label>
                     </li>
@@ -117,11 +117,11 @@ export default function Work() {
               )}
 
               <button onClick={() => toggleExpand(rec.id)}
-                className="mt-3 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300">
+                className="mt-3 flex items-center gap-1 text-xs text-muted hover:text-white/75">
                 {expanded === rec.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />} Transcript
               </button>
               {expanded === rec.id && (
-                <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-lg bg-surface-2 p-3 text-xs leading-relaxed text-gray-400">
+                <p className="mt-2 max-h-60 overflow-y-auto whitespace-pre-wrap rounded-xl bg-white/[0.04] p-3 text-xs leading-relaxed text-muted">
                   {transcript[rec.id] ?? 'Loading…'}
                 </p>
               )}

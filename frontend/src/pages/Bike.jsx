@@ -62,19 +62,19 @@ export default function Bike() {
 
       {showKomoot && (
         <Card>
-          <h3 className="mb-2 text-sm font-semibold text-gray-100">Komoot planned routes</h3>
+          <h3 className="mb-2 text-sm font-medium text-primary">Komoot planned routes</h3>
           {komoot.isLoading ? (
             <div className="flex justify-center py-6"><LoadingSpinner /></div>
           ) : komoot.isError ? (
             <p className="text-sm text-red-400">{komoot.error.message}</p>
           ) : (komoot.data || []).length === 0 ? (
-            <p className="text-sm text-gray-500">No planned routes found.</p>
+            <p className="text-sm text-muted">No planned routes found.</p>
           ) : (
-            <ul className="divide-y divide-line">
+            <ul className="divide-y divide-white/5">
               {komoot.data.map((t) => (
                 <li key={t.id} className="flex items-center justify-between py-2 text-sm">
-                  <span className="truncate text-gray-300">{t.name}</span>
-                  <span className="ml-3 shrink-0 text-xs text-gray-500">
+                  <span className="truncate text-white/75">{t.name}</span>
+                  <span className="ml-3 shrink-0 text-xs text-muted">
                     {t.distance?.toFixed(1)} km · ↑{Math.round(t.elevation_up || 0)} m
                   </span>
                 </li>
@@ -87,19 +87,19 @@ export default function Bike() {
       {activities.isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
       ) : (activities.data || []).length === 0 ? (
-        <Card className="py-10 text-center text-sm text-gray-500">
+        <Card className="py-10 text-center text-sm text-muted">
           No rides yet. Upload a FIT file from your Garmin or Coros.
         </Card>
       ) : (
         <div className="space-y-3">
           {activities.data.map((a) => (
-            <Card key={a.id} className="cursor-pointer hover:border-gray-700" onClick={() => openDetail(a.id)}>
+            <Card key={a.id} className="cursor-pointer hover:border-line-bright" onClick={() => openDetail(a.id)}>
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-medium text-gray-100">{a.title}</h3>
-                  <p className="text-xs text-gray-600">{a.date} · {a.source}</p>
+                  <h3 className="font-medium text-primary">{a.title}</h3>
+                  <p className="text-xs text-white/30">{a.date} · {a.source}</p>
                 </div>
-                <div className="flex gap-4 text-sm text-gray-400">
+                <div className="flex gap-4 text-sm text-muted">
                   <span className="flex items-center gap-1"><Route size={14} />{a.distance?.toFixed(1) ?? '—'} km</span>
                   <span className="hidden sm:flex items-center gap-1"><Clock size={14} />{fmtDur(a.duration)}</span>
                   <span className="hidden sm:flex items-center gap-1"><Mountain size={14} />{Math.round(a.elevation || 0)} m</span>
@@ -123,9 +123,9 @@ export default function Bike() {
               ['Source', detail.source],
               ['GPS points', detail.fit_data?.track?.length ?? 0]
             ].map(([k, v]) => (
-              <div key={k} className="rounded-lg bg-surface-2 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-gray-500">{k}</p>
-                <p className="mt-0.5 text-gray-200">{v}</p>
+              <div key={k} className="rounded-xl bg-white/[0.04] p-3">
+                <p className="label !text-[10px]">{k}</p>
+                <p className="mt-0.5 text-primary">{v}</p>
               </div>
             ))}
           </div>

@@ -1,10 +1,10 @@
-export default function Card({ children, className = '', variant = 'default', ...props }) {
+export default function Card({ children, className = '', variant = 'default', active = false, ...props }) {
   const variants = {
-    default: 'bg-surface border border-line',
-    elevated: 'bg-surface-2 border border-line shadow-lg shadow-black/40'
+    default: 'glass glass-hover',
+    elevated: 'glass glass-hover shadow-xl shadow-black/50'
   };
   return (
-    <div className={`rounded-xl p-4 ${variants[variant]} ${className}`} {...props}>
+    <div className={`${active ? 'gradient-border' : variants[variant]} p-4 ${className}`} {...props}>
       {children}
     </div>
   );

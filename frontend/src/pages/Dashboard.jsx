@@ -1,10 +1,41 @@
 import ReactMarkdown from 'react-markdown';
-import { RefreshCw, Check, Flame } from 'lucide-react';
+import { RefreshCw, Check, Flame, Bike, Dumbbell, Wallet, Sparkles } from 'lucide-react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import { Skeleton, SkeletonCard } from '../components/ui/LoadingSpinner';
 import { useGet, useAction } from '../hooks/useApi';
 import { useAppStore } from '../store/appStore';
+
+const fmt = (n) => new Intl.NumberFormat('ro-RO', { maximumFractionDigits: 0 }).format(n || 0);
+
+// Split the markdown briefing into compact card-sized sections (by heading or paragraph block).
+function briefingSections(content) {
+  if (!content) return [];
+  const parts = content.split(/\n(?=#{1,3} )/).flatMap((p) =>
+    p.length > 600 ? p.split(/\n\n+/) : [p]
+  );
+  return parts.map((s) => s.trim()).filter(Boolean).slice(0, 6);
+}
+
+function MetricCard({ label, value, unit, icon: Icon, color, sub, loading, active = false }) {
+  return (
+    <Card active={active} className="flex flex-col justify-between min-h-[140px]">
+      <div className="flex items-center justify-between">
+        <span className="label">{label}</span>
+        <Icon size={16} style={{ color }} className="opacity-80" />
+      </div>
+      {loading ? (
+        <Skeleton className="h-12 w-24" />
+      ) : (
+        <div>
+          <span className="metric">{value}</span>
+          {unit && <span className="ml-1 text-lg font-thin text-muted">{unit}</span>}
+        </div>
+      )}
+      {sub && <p className="mt-1 truncate text-xs text-muted">{sub}</p>}
+    </Card>
+  );
+}
 
 export default function Dashboard() {
   const viewMode = useAppStore((s) => s.viewMode);
@@ -12,109 +43,120 @@ export default function Dashboard() {
   const habits = useGet('habits', '/habits');
   const logs = useGet(['habit-logs'], '/habits/logs');
   const streaks = useGet('streaks', '/habits/streaks');
-  const tasks = useGet('blajeni-tasks', '/blajeni/tasks');
-  const notes = useGet('notes', '/notes');
+  const summary = useGet(['budget-summary'], `/budget/summary?month=${new Date().toISOString().slice(0, 7)}`);
+  const bike = useGet('bike-activities', '/bike/activities');
+  const fitness = useGet('fitness-sessions', '/fitness/sessions');
 
   const regenerate = useAction({ url: '/briefing/generate', invalidate: ['briefing'], successMessage: 'Briefing regenerated' });
   const logHabit = useAction({ invalidate: [['habit-logs'], 'streaks'] });
 
   const doneIds = new Set((logs.data || []).map((l) => l.habit_id));
-  const openTasks = (tasks.data || []).filter((t) => t.status !== 'done').slice(0, 5);
-  const recentNotes = (notes.data || []).slice(0, 4);
+  const bestStreak = Math.max(0, ...(streaks.data || []).map((s) => s.streak));
+  const lastRide = (bike.data || [])[0];
+  const today = new Date().toISOString().slice(0, 10);
+  const todaySession = (fitness.data || []).find((s) => s.date === today && s.type !== 'metrics');
+  const habitsDone = doneIds.size;
+  const habitsTotal = (habits.data || []).length;
   const dense = viewMode === 'dense';
+  const sections = briefingSections(briefing.data?.content);
 
   return (
-    <div className={`grid gap-4 ${dense ? 'lg:grid-cols-3' : 'max-w-2xl mx-auto'}`}>
-      <Card className={dense ? 'lg:col-span-2' : ''}>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500">Daily briefing</h2>
+    <div className="grid gap-5 lg:grid-cols-5">
+      {/* LEFT PANEL — briefing */}
+      <section className={dense ? 'lg:col-span-3' : 'lg:col-span-3'}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="heading text-base flex items-center gap-2">
+            <Sparkles size={15} className="text-accent" /> Daily briefing
+          </h2>
           <Button variant="ghost" loading={regenerate.isPending} onClick={() => regenerate.mutate({})} className="!p-2">
             <RefreshCw size={15} />
           </Button>
         </div>
-        {briefing.isLoading ? (
-          <div className="flex items-center gap-3 py-8 justify-center text-sm text-gray-500">
-            <LoadingSpinner /> Generating your briefing…
+
+        {briefing.isLoading || regenerate.isPending ? (
+          <div className="space-y-3">
+            <SkeletonCard lines={2} />
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={2} />
           </div>
         ) : briefing.isError ? (
-          <p className="text-sm text-red-400">{briefing.error.message}</p>
+          <Card><p className="text-sm text-red-400">{briefing.error.message}</p></Card>
         ) : (
-          <div className="prose-dark text-sm text-gray-300">
-            <ReactMarkdown>{briefing.data?.content || ''}</ReactMarkdown>
+          <div className="space-y-3">
+            {sections.map((section, i) => (
+              <Card key={i} active={i === 0}>
+                <div className="prose-dark text-sm text-white/75">
+                  <ReactMarkdown>{section}</ReactMarkdown>
+                </div>
+              </Card>
+            ))}
           </div>
         )}
-      </Card>
 
-      <div className="space-y-4">
-        <Card>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Today's habits</h2>
+        {/* Habit quick-check strip */}
+        <div className="mt-5">
+          <span className="label mb-3 block">Today's habits</span>
           {habits.isLoading ? (
-            <LoadingSpinner />
-          ) : (habits.data || []).length === 0 ? (
-            <p className="text-sm text-gray-500">No habits yet — add some in the Habits tab.</p>
+            <div className="flex gap-2">
+              <Skeleton className="h-9 w-28" /><Skeleton className="h-9 w-24" />
+            </div>
+          ) : habitsTotal === 0 ? (
+            <p className="text-sm text-muted">No habits yet — add some in the Habits tab.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
               {habits.data.map((h) => {
                 const done = doneIds.has(h.id);
-                const streak = (streaks.data || []).find((s) => s.id === h.id)?.streak || 0;
                 return (
                   <button
                     key={h.id}
                     onClick={() => logHabit.mutate({ url: `/habits/${h.id}/log`, data: { completed: !done } })}
-                    className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors ${
-                      done ? 'border-green-500/30 bg-green-500/10 text-green-300' : 'border-line bg-surface-2 text-gray-300'
+                    className={`flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-sm transition-all duration-150 ${
+                      done
+                        ? 'border-accent-green/40 bg-accent-green/10 text-accent-green'
+                        : 'border-glass-border bg-glass text-muted hover:border-line-bright hover:text-primary'
                     }`}
                   >
-                    <span className="flex items-center gap-2">
-                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${done ? 'border-green-400 bg-green-500/30' : 'border-gray-600'}`}>
-                        {done && <Check size={12} />}
-                      </span>
-                      {h.name}
-                    </span>
-                    {streak > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-orange-400">
-                        <Flame size={12} /> {streak}
-                      </span>
-                    )}
+                    <Check size={13} className={done ? '' : 'opacity-30'} />
+                    {h.name}
                   </button>
                 );
               })}
             </div>
           )}
-        </Card>
+        </div>
+      </section>
 
-        {dense && (
-          <>
-            <Card>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Open tasks</h2>
-              {openTasks.length === 0 ? (
-                <p className="text-sm text-gray-500">All clear.</p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {openTasks.map((t) => (
-                    <li key={t.id} className="flex items-center justify-between text-gray-300">
-                      <span className="truncate">{t.title}</span>
-                      <span className="ml-2 shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[10px] uppercase text-gray-500">{t.priority}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-            <Card>
-              <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-500">Recent notes</h2>
-              {recentNotes.length === 0 ? (
-                <p className="text-sm text-gray-500">No notes yet.</p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {recentNotes.map((n) => (
-                    <li key={n.id} className="truncate text-gray-300">{n.title}</li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </>
-        )}
-      </div>
+      {/* RIGHT PANEL — metrics grid */}
+      <section className="lg:col-span-2">
+        <span className="label mb-3 block">Metrics</span>
+        <div className={`grid gap-3 ${dense ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-2'}`}>
+          <MetricCard
+            label="Streak" icon={Flame} color="#7c3aed"
+            value={bestStreak} unit="days"
+            sub={`${habitsDone}/${habitsTotal} habits done today`}
+            loading={streaks.isLoading}
+            active={bestStreak > 0 && habitsDone === habitsTotal && habitsTotal > 0}
+          />
+          <MetricCard
+            label="Budget" icon={Wallet} color="#f59e0b"
+            value={fmt(summary.data?.balance)} unit="lei"
+            sub={`${fmt(summary.data?.expenses)} spent this month`}
+            loading={summary.isLoading}
+          />
+          <MetricCard
+            label="Last ride" icon={Bike} color="#10b981"
+            value={lastRide ? (lastRide.distance ?? 0).toFixed(0) : '—'} unit={lastRide ? 'km' : ''}
+            sub={lastRide ? `${lastRide.title} · ${lastRide.date}` : 'No rides yet'}
+            loading={bike.isLoading}
+          />
+          <MetricCard
+            label="Workout" icon={Dumbbell} color="#10b981"
+            value={todaySession ? todaySession.duration : '0'} unit="min"
+            sub={todaySession ? 'Done this morning' : 'Not logged today'}
+            loading={fitness.isLoading}
+          />
+        </div>
+      </section>
     </div>
   );
 }

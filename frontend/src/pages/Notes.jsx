@@ -41,19 +41,19 @@ export default function Notes() {
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         <button onClick={() => setActiveProject(null)}
-          className={`rounded-full px-3 py-1 text-xs ${!activeProject ? 'bg-accent text-white' : 'bg-surface-2 text-gray-400'}`}>
+          className={`rounded-full px-3 py-1 text-xs ${!activeProject ? 'bg-accent text-white' : 'bg-white/[0.05] text-muted hover:bg-white/[0.08]'}`}>
           All
         </button>
         {(projects.data || []).map((p) => (
           <button key={p.id} onClick={() => setActiveProject(p.id)}
-            className={`rounded-full px-3 py-1 text-xs ${activeProject === p.id ? 'text-white' : 'bg-surface-2 text-gray-400'}`}
+            className={`rounded-full px-3 py-1 text-xs ${activeProject === p.id ? 'text-white' : 'bg-white/[0.05] text-muted hover:bg-white/[0.08]'}`}
             style={activeProject === p.id ? { background: p.color } : {}}>
             {p.name}
           </button>
         ))}
         <div className="ml-auto flex items-center gap-2">
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-2.5 text-gray-500" />
+            <Search size={14} className="absolute left-2.5 top-2.5 text-muted" />
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search…"
               className="w-36 rounded-lg border border-line bg-surface-2 py-1.5 pl-8 pr-2 text-sm outline-none focus:border-accent sm:w-48" />
           </div>
@@ -64,18 +64,18 @@ export default function Notes() {
       {notes.isLoading ? (
         <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
       ) : (notes.data || []).length === 0 ? (
-        <Card className="py-10 text-center text-sm text-gray-500">No notes here yet.</Card>
+        <Card className="py-10 text-center text-sm text-muted">No notes here yet.</Card>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           {notes.data.map((n) => (
-            <Card key={n.id} className="cursor-pointer hover:border-gray-700" onClick={() => open(n)}>
+            <Card key={n.id} className="cursor-pointer hover:border-line-bright" onClick={() => open(n)}>
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-medium text-gray-100">{n.title}</h3>
+                <h3 className="font-medium text-primary">{n.title}</h3>
                 <button onClick={(e) => { e.stopPropagation(); confirm('Delete note?') && remove.mutate({ url: `/notes/${n.id}` }); }}
-                  className="text-gray-600 hover:text-red-400"><Trash2 size={14} /></button>
+                  className="text-white/30 hover:text-red-400"><Trash2 size={14} /></button>
               </div>
-              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-gray-400">{n.content}</p>
-              <p className="mt-2 text-[11px] text-gray-600">
+              <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-sm text-muted">{n.content}</p>
+              <p className="mt-2 text-[11px] text-white/30">
                 {formatDistanceToNow(new Date(n.updated_at + 'Z'), { addSuffix: true })}
               </p>
             </Card>

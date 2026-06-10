@@ -58,11 +58,11 @@ export default function Budget() {
         {[
           { label: 'Income', value: s?.income, color: 'text-green-400' },
           { label: 'Expenses', value: s?.expenses, color: 'text-red-400' },
-          { label: 'Balance', value: s?.balance, color: 'text-gray-100' }
+          { label: 'Balance', value: s?.balance, color: 'text-primary' }
         ].map(({ label, value, color }) => (
           <Card key={label} className="text-center">
-            <p className="text-[11px] uppercase tracking-wider text-gray-500">{label}</p>
-            <p className={`mt-1 text-lg font-semibold ${color}`}>
+            <p className="label !text-[10px]">{label}</p>
+            <p className={`mt-1 text-lg font-medium ${color}`}>
               {summary.isLoading ? <LoadingSpinner size="sm" /> : fmt(value || 0)}
             </p>
           </Card>
@@ -84,11 +84,11 @@ export default function Budget() {
 
       {s?.by_category?.length > 0 && (
         <Card>
-          <h3 className="mb-2 text-sm font-semibold text-gray-100">By category</h3>
+          <h3 className="mb-2 text-sm font-medium text-primary">By category</h3>
           <div className="space-y-1.5">
             {s.by_category.map((c) => (
               <div key={c.category} className="flex items-center justify-between text-sm">
-                <span className="capitalize text-gray-400">{c.category}</span>
+                <span className="capitalize text-muted">{c.category}</span>
                 <span className={c.total < 0 ? 'text-red-400' : 'text-green-400'}>{fmt(c.total)}</span>
               </div>
             ))}
@@ -97,18 +97,18 @@ export default function Budget() {
       )}
 
       <Card>
-        <h3 className="mb-2 text-sm font-semibold text-gray-100">Transactions — {month}</h3>
+        <h3 className="mb-2 text-sm font-medium text-primary">Transactions — {month}</h3>
         {txs.isLoading ? (
           <div className="flex justify-center py-8"><LoadingSpinner /></div>
         ) : (txs.data || []).length === 0 ? (
-          <p className="py-4 text-center text-sm text-gray-500">No transactions this month.</p>
+          <p className="py-4 text-center text-sm text-muted">No transactions this month.</p>
         ) : (
-          <ul className="divide-y divide-line">
+          <ul className="divide-y divide-white/5">
             {txs.data.map((t) => (
               <li key={t.id} className="flex items-center justify-between py-2 text-sm">
                 <div className="min-w-0">
-                  <p className="truncate text-gray-300">{t.description || t.category}</p>
-                  <p className="text-[11px] text-gray-600">{t.date} · {t.source}</p>
+                  <p className="truncate text-white/75">{t.description || t.category}</p>
+                  <p className="text-[11px] text-white/30">{t.date} · {t.source}</p>
                 </div>
                 <span className={`ml-3 shrink-0 font-medium ${t.amount < 0 ? 'text-red-400' : 'text-green-400'}`}>
                   {fmt(t.amount)}

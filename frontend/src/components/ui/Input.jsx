@@ -2,10 +2,10 @@ export default function Input({ label, error, className = '', as = 'input', ...p
   const Tag = as;
   return (
     <label className="block">
-      {label && <span className="mb-1 block text-xs font-medium text-gray-400">{label}</span>}
+      {label && <span className="label mb-1.5 block">{label}</span>}
       <Tag
-        className={`w-full rounded-lg bg-surface-2 border px-3 py-2 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-accent transition-colors ${
-          error ? 'border-red-500' : 'border-line'
+        className={`w-full rounded-xl bg-glass border px-3.5 py-2.5 text-sm text-primary placeholder-white/25 outline-none transition-all duration-150 focus:border-accent focus:bg-white/[0.05] ${
+          error ? 'border-red-500' : 'border-glass-border'
         } ${className}`}
         {...props}
       />

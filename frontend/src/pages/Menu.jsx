@@ -19,14 +19,14 @@ export default function Menu() {
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-500">{plan ? `Week of ${plan.week_start}` : 'No menu for this week yet.'}</p>
+        <p className="text-sm text-muted">{plan ? `Week of ${plan.week_start}` : 'No menu for this week yet.'}</p>
         <Button loading={generate.isPending} onClick={() => generate.mutate({ data: {} })}>
           <Sparkles size={15} /> {plan ? 'Regenerate' : 'Generate with Claude'}
         </Button>
       </div>
 
       {generate.isPending && (
-        <Card className="flex items-center justify-center gap-3 py-10 text-sm text-gray-500">
+        <Card className="flex items-center justify-center gap-3 py-10 text-sm text-muted">
           <LoadingSpinner /> Claude is planning your week…
         </Card>
       )}
@@ -36,12 +36,12 @@ export default function Menu() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {DAYS.map((day) => (
               <Card key={day}>
-                <h3 className="mb-2 text-sm font-semibold capitalize text-gray-100">{day}</h3>
+                <h3 className="mb-2 text-sm font-medium capitalize text-primary">{day}</h3>
                 <div className="space-y-2 text-sm">
                   {MEALS.map((meal) => (
                     <div key={meal}>
-                      <span className="text-[10px] uppercase tracking-wider text-gray-500">{meal}</span>
-                      <p className="text-gray-300">{plan.meals?.[day]?.[meal] || '—'}</p>
+                      <span className="label !text-[10px]">{meal}</span>
+                      <p className="text-white/75">{plan.meals?.[day]?.[meal] || '—'}</p>
                     </div>
                   ))}
                 </div>
@@ -50,7 +50,7 @@ export default function Menu() {
           </div>
 
           <Card>
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-100">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-medium text-primary">
               <ShoppingCart size={16} /> Shopping list
             </h3>
             <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
@@ -58,9 +58,9 @@ export default function Menu() {
                 <label key={i} className="flex cursor-pointer items-center gap-2 py-1 text-sm">
                   <input type="checkbox" checked={!!item.checked}
                     onChange={(e) => toggle.mutate({ url: `/menu/${plan.id}/shopping`, data: { index: i, checked: e.target.checked } })}
-                    className="h-4 w-4 rounded accent-blue-500" />
-                  <span className={item.checked ? 'text-gray-600 line-through' : 'text-gray-300'}>
-                    {item.item} {item.quantity && <span className="text-gray-500">({item.quantity})</span>}
+                    className="h-4 w-4 rounded accent-violet-600" />
+                  <span className={item.checked ? 'text-white/30 line-through' : 'text-white/75'}>
+                    {item.item} {item.quantity && <span className="text-muted">({item.quantity})</span>}
                   </span>
                 </label>
               ))}
