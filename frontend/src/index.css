@@ -476,8 +476,14 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* ── mobile mbar (≤720px) ── */
-.j-mbar { display: none; }
+/* ── bottom nav ── */
+.j-mbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: grid; grid-template-columns: repeat(5,1fr);
+  padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(14,12,9,0.88); border-top: 1px solid rgba(255,255,255,0.09);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
 .j-sheet-veil { position: fixed; inset: 0; z-index: 55; background: rgba(8,6,4,0.5); backdrop-filter: blur(4px); animation: veilIn 0.18s ease both; }
 .j-sheet {
   position: absolute; left: 0; right: 0; bottom: 0;
@@ -518,27 +524,13 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   .j-tx { grid-template-columns: 1.2fr 1fr auto; }
   .j-tx-cat { display: none; }
   .j-log-date { display: none; }
-  .j-dock { display: none; }
-  .j-mbar {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    display: grid; grid-template-columns: repeat(5,1fr);
-    padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
-    background: rgba(14,12,9,0.85); border-top: 1px solid rgba(255,255,255,0.09);
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  }
-  .j-mbar-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 6px 2px; border-radius: 10px; color: var(--faint); font-size: 10px;
-    letter-spacing: 0.02em; min-height: 48px; transition: color 0.2s;
-  }
-  .j-mbar-btn.active { color: var(--accent); }
 }
 
 /* ── layout shell ── */
 .j-main {
   position: relative; z-index: 1;
   min-height: 100vh;
-  padding: 0 0 120px 100px; /* leave room for dock on left, or bottom on mobile */
+  padding: 0 0 90px 0;
 }
 .j-topbar {
   display: flex; align-items: center;
@@ -557,18 +549,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 }
 .j-icon-btn:hover { color: var(--ink); border-color: rgba(255,255,255,0.18); }
 
-/* dock on left side for desktop */
-.j-dock {
-  position: fixed; left: 16px; top: 50%; transform: translateY(-50%);
-  bottom: auto;
-  z-index: 40; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px;
-  background: rgba(18,15,11,0.72); border: 1px solid rgba(255,255,255,0.1); border-radius: 100px;
-  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-  box-shadow: 16px 0 48px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.04) inset;
-}
-.j-dock-sep { width: 22px; height: 1px; background: var(--line); margin: 5px 0; }
-
-/* override the bottom positioning from the original j-dock rule above */
+/* dock hidden — using bottom bar only */
+.j-dock { display: none !important; }
 
 /* ── tilt card ── */
 .j-tilt { transition: transform 0.25s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s; will-change: transform; }
