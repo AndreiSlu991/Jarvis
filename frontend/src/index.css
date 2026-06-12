@@ -530,7 +530,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .j-main {
   position: relative; z-index: 1;
   min-height: 100vh;
-  padding: 0 0 90px 0;
+  padding: 0 0 calc(90px + env(safe-area-inset-bottom, 0px)) 0;
 }
 .j-topbar {
   display: flex; align-items: center;
@@ -541,7 +541,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-size: 22px; font-weight: 500; letter-spacing: -0.01em; flex: 1;
 }
 .j-topbar-right { display: flex; align-items: center; gap: 8px; }
-.j-content { padding: 24px 32px; }
+.j-content { padding: 24px 32px 120px; }
 .j-icon-btn {
   width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
   color: var(--dim); border: 1px solid var(--line); background: rgba(255,255,255,0.03);
@@ -566,8 +566,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .j-flex-col { display: flex; flex-direction: column; }
 
 @media (max-width: 720px) {
-  .j-main { padding: 0 0 80px 0; }
+  .j-main { padding: 0 0 calc(80px + env(safe-area-inset-bottom, 0px)) 0; }
   .j-topbar { padding: 14px 18px 12px; }
   .j-topbar-title { font-size: 18px; }
-  .j-content { padding: 16px 18px; }
+  .j-content { padding: 16px 18px 100px; }
 }
