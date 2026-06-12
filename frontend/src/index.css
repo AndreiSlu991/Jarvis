@@ -481,8 +481,15 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
   display: grid; grid-template-columns: repeat(5,1fr);
   padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(14,12,9,0.88); border-top: 1px solid rgba(255,255,255,0.09);
+  background: rgba(14,12,9,0.92); border-top: 1px solid rgba(255,255,255,0.09);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+}
+/* fade-out above the nav bar so content doesn't hard-clip */
+.j-mbar::before {
+  content: '';
+  position: absolute; left: 0; right: 0; bottom: 100%;
+  height: 48px; pointer-events: none;
+  background: linear-gradient(to top, rgba(12,10,8,0.85), transparent);
 }
 .j-sheet-veil { position: fixed; inset: 0; z-index: 55; background: rgba(8,6,4,0.5); backdrop-filter: blur(4px); animation: veilIn 0.18s ease both; }
 .j-sheet {
@@ -530,7 +537,6 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .j-main {
   position: relative; z-index: 1;
   min-height: 100vh;
-  padding: 0 0 calc(90px + env(safe-area-inset-bottom, 0px)) 0;
 }
 .j-topbar {
   display: flex; align-items: center;
@@ -541,7 +547,7 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
   font-size: 22px; font-weight: 500; letter-spacing: -0.01em; flex: 1;
 }
 .j-topbar-right { display: flex; align-items: center; gap: 8px; }
-.j-content { padding: 24px 32px 120px; }
+.j-content { padding: 24px 32px 140px; }
 .j-icon-btn {
   width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
   color: var(--dim); border: 1px solid var(--line); background: rgba(255,255,255,0.03);
@@ -566,8 +572,8 @@ button { font: inherit; color: inherit; background: none; border: none; cursor: 
 .j-flex-col { display: flex; flex-direction: column; }
 
 @media (max-width: 720px) {
-  .j-main { padding: 0 0 calc(80px + env(safe-area-inset-bottom, 0px)) 0; }
+  .j-main { padding: 0; }
   .j-topbar { padding: 14px 18px 12px; }
   .j-topbar-title { font-size: 18px; }
-  .j-content { padding: 16px 18px 100px; }
+  .j-content { padding: 16px 18px 120px; }
 }
