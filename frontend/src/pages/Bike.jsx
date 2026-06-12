@@ -1,26 +1,24 @@
 import { useRef, useState } from 'react';
-import { Upload, Map, Mountain, Clock, Route } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Modal from '../components/ui/Modal';
-import LoadingSpinner from '../components/ui/LoadingSpinner';
+import TiltCard from '../components/ui/TiltCard.jsx';
+import JIcon from '../components/ui/JIcon.jsx';
 import api from '../api/client';
 import { useGet } from '../hooks/useApi';
 
 const fmtDur = (s) => {
   if (s == null) return '—';
-  const h = Math.floor(s / 3600), m = Math.round((s % 3600) / 60);
+  const h = Math.floor(s / 3600);
+  const m = Math.round((s % 3600) / 60);
   return h ? `${h}h ${m}m` : `${m}m`;
 };
 
 export default function Bike() {
-  const activities = useGet('bike-activities', '/bike/activities');
+  const activities = useGet(['bike-activities'], '/bike/activities?limit=10');
   const [showKomoot, setShowKomoot] = useState(false);
-  const komoot = useGet('komoot', '/bike/komoot', { enabled: showKomoot });
-  const [detail, setDetail] = useState(null);
+  const komoot = useGet(['bike-komoot'], '/bike/komoot', { enabled: showKomoot });
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const fileRef = useRef();
   const qc = useQueryClient();
 
@@ -29,7 +27,7 @@ export default function Bike() {
     fd.append('file', file);
     setUploading(true);
     try {
-      await api.post('/bike/activities/upload', fd);
+      await api.post('/bike/upload', fd);
       toast.success('Activity imported');
       qc.invalidateQueries({ queryKey: ['bike-activities'] });
     } catch (err) {
@@ -39,98 +37,130 @@ export default function Bike() {
     }
   }
 
-  async function openDetail(id) {
-    try {
-      const { data } = await api.get(`/bike/activities/${id}`);
-      setDetail(data);
-    } catch (err) {
-      toast.error(err.message);
-    }
-  }
-
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Button loading={uploading} onClick={() => fileRef.current.click()}>
-          <Upload size={15} /> Upload FIT (Garmin / Coros)
-        </Button>
-        <Button variant="secondary" onClick={() => setShowKomoot(!showKomoot)}>
-          <Map size={15} /> Komoot routes
-        </Button>
-        <input ref={fileRef} type="file" accept=".fit" hidden onChange={(e) => e.target.files[0] && uploadFit(e.target.files[0])} />
+    <div className="j-screen-col">
+      {/* upload dropzone */}
+      <div
+        className={`j-dropzone${dragOver ? ' active' : ''}`}
+        onClick={() => fileRef.current.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          e.dataTransfer.files[0] && uploadFit(e.dataTransfer.files[0]);
+        }}
+      >
+        <JIcon name="upload" style={{ fontSize: 28, color: 'var(--fg-muted)' }} />
+        <div className="j-dropzone-title">
+          {uploading ? 'Importing activity…' : 'Drop a FIT file here or tap to upload'}
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginTop: 4 }}>
+          Garmin / Coros · .fit files
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".fit"
+          hidden
+          onChange={(e) => e.target.files[0] && uploadFit(e.target.files[0])}
+        />
       </div>
 
-      {showKomoot && (
-        <Card>
-          <h3 className="mb-2 text-sm font-medium text-primary">Komoot planned routes</h3>
-          {komoot.isLoading ? (
-            <div className="flex justify-center py-6"><LoadingSpinner /></div>
-          ) : komoot.isError ? (
-            <p className="text-sm text-red-400">{komoot.error.message}</p>
-          ) : (komoot.data || []).length === 0 ? (
-            <p className="text-sm text-muted">No planned routes found.</p>
-          ) : (
-            <ul className="divide-y divide-white/5">
-              {komoot.data.map((t) => (
-                <li key={t.id} className="flex items-center justify-between py-2 text-sm">
-                  <span className="truncate text-white/75">{t.name}</span>
-                  <span className="ml-3 shrink-0 text-xs text-muted">
-                    {t.distance?.toFixed(1)} km · ↑{Math.round(t.elevation_up || 0)} m
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      )}
-
-      {activities.isLoading ? (
-        <div className="flex justify-center py-16"><LoadingSpinner size="lg" /></div>
-      ) : (activities.data || []).length === 0 ? (
-        <Card className="py-10 text-center text-sm text-muted">
-          No rides yet. Upload a FIT file from your Garmin or Coros.
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {activities.data.map((a) => (
-            <Card key={a.id} className="cursor-pointer hover:border-line-bright" onClick={() => openDetail(a.id)}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-medium text-primary">{a.title}</h3>
-                  <p className="text-xs text-white/30">{a.date} · {a.source}</p>
-                </div>
-                <div className="flex gap-4 text-sm text-muted">
-                  <span className="flex items-center gap-1"><Route size={14} />{a.distance?.toFixed(1) ?? '—'} km</span>
-                  <span className="hidden sm:flex items-center gap-1"><Clock size={14} />{fmtDur(a.duration)}</span>
-                  <span className="hidden sm:flex items-center gap-1"><Mountain size={14} />{Math.round(a.elevation || 0)} m</span>
-                </div>
-              </div>
-            </Card>
-          ))}
+      {/* komoot section */}
+      <div className="j-card">
+        <div className="j-row-head">
+          <div className="j-sec-title">Komoot Routes</div>
+          <button
+            className="j-btn j-btn-ghost j-btn-sm"
+            onClick={() => setShowKomoot((v) => !v)}
+          >
+            <JIcon name="map" /> {showKomoot ? 'Hide' : 'Show'}
+          </button>
         </div>
-      )}
 
-      <Modal open={!!detail} onClose={() => setDetail(null)} title={detail?.title}>
-        {detail && (
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            {[
-              ['Date', detail.date],
-              ['Distance', `${detail.distance?.toFixed(2) ?? '—'} km`],
-              ['Duration', fmtDur(detail.duration)],
-              ['Elevation', `${Math.round(detail.elevation || 0)} m`],
-              ['Avg HR', detail.avg_hr ? `${Math.round(detail.avg_hr)} bpm` : '—'],
-              ['Max HR', detail.max_hr ? `${Math.round(detail.max_hr)} bpm` : '—'],
-              ['Source', detail.source],
-              ['GPS points', detail.fit_data?.track?.length ?? 0]
-            ].map(([k, v]) => (
-              <div key={k} className="rounded-xl bg-white/[0.04] p-3">
-                <p className="label !text-[10px]">{k}</p>
-                <p className="mt-0.5 text-primary">{v}</p>
-              </div>
+        {showKomoot && (
+          <div style={{ marginTop: 12 }}>
+            {komoot.isLoading ? (
+              <div className="j-skel" style={{ height: 100 }} />
+            ) : komoot.isError ? (
+              <p style={{ color: 'var(--red)', fontSize: 13 }}>{komoot.error?.message}</p>
+            ) : (komoot.data ?? []).length === 0 ? (
+              <p style={{ color: 'var(--fg-muted)', fontSize: 13 }}>No planned routes found.</p>
+            ) : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {komoot.data.map((r) => (
+                  <li
+                    key={r.id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '8px 0',
+                      borderBottom: '1px solid var(--border)',
+                    }}
+                  >
+                    <span style={{ fontSize: 13 }}>{r.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--fg-muted)', flexShrink: 0, marginLeft: 12 }}>
+                      {r.distance?.toFixed(1)} km · ↑{Math.round(r.elevation_up ?? 0)} m
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* activities list */}
+      <div className="j-card" style={{ flex: 1 }}>
+        <div className="j-sec-title" style={{ marginBottom: 12 }}>Activities</div>
+
+        {activities.isLoading ? (
+          <div className="j-skel" style={{ height: 240 }} />
+        ) : (activities.data ?? []).length === 0 ? (
+          <p style={{ textAlign: 'center', color: 'var(--fg-muted)', padding: '32px 0', fontSize: 14 }}>
+            No rides yet. Upload a FIT file.
+          </p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {activities.data.map((a) => (
+              <TiltCard key={a.id} className="j-card" style={{ cursor: 'default' }}>
+                <div style={{ marginBottom: 6 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{a.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--fg-muted)', marginTop: 2 }}>
+                    {a.date} · {a.source}
+                  </div>
+                </div>
+                <div className="j-ride-stats">
+                  <div className="j-metric">
+                    <div className="j-metric-label">Distance</div>
+                    <div className="j-metric-num">{a.distance?.toFixed(1) ?? '—'}</div>
+                    <div className="j-metric-sub">km</div>
+                  </div>
+                  <div className="j-metric">
+                    <div className="j-metric-label">Duration</div>
+                    <div className="j-metric-num">{fmtDur(a.duration)}</div>
+                    <div className="j-metric-sub">&nbsp;</div>
+                  </div>
+                  <div className="j-metric">
+                    <div className="j-metric-label">Elevation</div>
+                    <div className="j-metric-num">{Math.round(a.elevation ?? 0)}</div>
+                    <div className="j-metric-sub">m</div>
+                  </div>
+                  {a.avg_hr != null && (
+                    <div className="j-metric">
+                      <div className="j-metric-label">Avg HR</div>
+                      <div className="j-metric-num">{Math.round(a.avg_hr)}</div>
+                      <div className="j-metric-sub">bpm</div>
+                    </div>
+                  )}
+                </div>
+              </TiltCard>
             ))}
           </div>
         )}
-      </Modal>
+      </div>
     </div>
   );
 }
